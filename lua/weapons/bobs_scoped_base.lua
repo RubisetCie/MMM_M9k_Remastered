@@ -80,6 +80,45 @@ function SWEP:Initialize()
 end
 
 function SWEP:Think()
+	local eViewEnt = self.Owner:GetViewEntity()
+		self.Owner.m9k_lastViewEnt = self.Owner.m9k_lastViewEnt or eViewEnt
+
+	if self.OverrideZoomToggle and self.Owner:KeyReleased(IN_ATTACK2) then
+		self:SetNWInt("ScopeState",0)
+
+		local Scope = self:GetNWInt("ScopeState")
+
+		if Scope == 0 then
+			self.Owner:SetFOV(0,0.1)
+		elseif Scope == 1 then
+			self.Owner:SetFOV(50,0.1)
+		elseif Scope == 2 then
+			self.Owner:SetFOV(25,0.1)
+		elseif Scope == 3 then
+			self.Owner:SetFOV(10,0.1)
+		end
+	end
+
+	if self.Owner.m9k_lastViewEnt ~= eViewEnt then
+		if self.Owner:GetViewEntity() ~= self.Owner then
+			self.Owner:SetFOV(0)
+		else
+			local Scope = self:GetNWInt("ScopeState")
+
+			if Scope == 0 then
+				self.Owner:SetFOV(0)
+			elseif Scope == 1 then
+				self.Owner:SetFOV(50)
+			elseif Scope == 2 then
+				self.Owner:SetFOV(25)
+			elseif Scope == 3 then
+				self.Owner:SetFOV(10)
+			end
+		end
+
+		self.Owner.m9k_lastViewEnt = eViewEnt
+	end
+
 	if self:GetNWInt("ScopeState") > 0 and self.Owner:GetVelocity():Length() < 100 then
 		self.Primary.Spread = self.Primary.SpreadZoomed
 	else
@@ -111,11 +150,45 @@ function SWEP:AdjustMouseSensitivity()
 end
 
 function SWEP:SecondaryAttack()
+	if not IsFirstTimePredicted() then return end
 	if self.ScopeCD > CurTime() or self.Owner:GetViewEntity() ~= self.Owner then return false end
 	local Scope = self:GetNWInt("ScopeState")
+	local ScopeT = Scope
 
-	Scope = Scope  + 1
-	if (self.HasZoomStages and Scope > 3) or (not self.HasZoomStages and Scope > 1) then
+	if CLIENT then
+
+		-- We want to predict the overlay so that it doesn't appear delayed, disappearing cannot be predicted
+
+		Scope = Scope  + 1
+
+		if Scope == 0 then
+			self.Owner:SetFOV(0,0.1)
+		elseif Scope == 1 then
+			self.Owner:SetFOV(50,0.1)
+		elseif Scope == 2 then
+			self.Owner:SetFOV(25,0.1)
+		elseif Scope == 3 then
+			self.Owner:SetFOV(10,0.1)
+		end
+
+		self:SetNWInt("ScopeState",Scope)
+
+		return -- The client has no business here past this point
+	end
+
+	local bOverride = false
+
+	if self.OverrideMaxZoomStage then
+		if Scope ~= 0 and not self.Owner:KeyDown(IN_ATTACK2) then
+			bOverride = true
+		end
+
+		Scope = (self.HasZoomStages and 3 or 1)
+	else
+		Scope = Scope  + 1
+	end
+
+	if bOverride or (self.HasZoomStages and Scope > 3) or (not self.HasZoomStages and Scope > 1) then
 		Scope = 0
 	end
 	self.ScopeCD = CurTime() + 0.2
@@ -130,23 +203,35 @@ function SWEP:SecondaryAttack()
 		self.Owner:SetFOV(10,0.1)
 	end
 
-	self:SetNWInt("ScopeState",Scope)
-	self.Owner:EmitSound("weapons/zoom.wav")
+	if Scope ~= ScopeT then -- Only network stuff and play the sound when stuff actually changed
+		self:SetNWInt("ScopeState",Scope)
+		self.Owner:EmitSound("weapons/zoom.wav")
+	end
 end
 
 function SWEP:Reload()
 	if SERVER and game.SinglePlayer() then self:CallOnClient("Reload") end -- Make sure that it runs on the CLIENT!
 	timer.Remove("m9k_resetscope_" .. self.OurIndex) -- Needed for bolt-action sniper rifles to prevent the restoring of the zoom level
 
+	local bCanReload = (self.CanReload and self.NextReloadTime < CurTime() and self.Owner:GetAmmoCount(self.Primary.Ammo) >= 1 and self:Clip1() < self:GetMaxClip1())
+
+	if self:GetNWBool("M9kr_OvrZoomToggl") and not bCanReload then
+
+		return -- We bail here since we don't want reloading to reset the scope unless we can actually reload
+	end
+
 	if self:GetNWInt("ScopeState") > 0 then
 		self.Owner:SetFOV(0,0.1)
 		self:SetNWInt("ScopeState",0)
 		self.ScopeCD = CurTime() + 0.2
 		self.Owner:EmitSound("weapons/zoom.wav")
-		self.NextReloadTime = CurTime() + 0.5
+
+		if not self.OverrideMaxZoomStage then -- We don't want a force reload on hold
+			self.NextReloadTime = CurTime() + 0.5
+		end
 	end
 
-	if self.CanReload and self.NextReloadTime < CurTime() and self.Owner:GetAmmoCount(self.Primary.Ammo) >= 1 and self:Clip1() < self:GetMaxClip1() then
+	if bCanReload then
 		self:DefaultReload(ACT_VM_RELOAD)
 		self.Owner:SetAnimation(PLAYER_RELOAD)
 	end
