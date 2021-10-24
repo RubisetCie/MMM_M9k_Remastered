@@ -54,8 +54,12 @@ function SWEP:PrimaryAttack()
 
 			timer.Create("m9k_resetscope_" .. self.OurIndex,1.9,1,function()
 				if not IsValid(self) or not IsValid(self.Owner) or not IsValid(self.Owner:GetActiveWeapon()) or self.Owner:GetActiveWeapon():GetClass() ~= self.ClassName then return end
-				self:SetNWInt("ScopeState",OldScopeState - 1)
-				self:SecondaryAttack()  -- Shitty but effective hack
+
+				if (self:GetNWBool("M9kr_OvrZoomStage") and self.Owner:KeyDown(IN_ATTACK2)) or not self:GetNWBool("M9kr_OvrZoomStage") then
+					self:SetNWInt("ScopeState",OldScopeState - 1)
+
+					self:SecondaryAttack()  -- Shitty but effective hack
+				end
 			end)
 		end
 
@@ -73,6 +77,8 @@ if CLIENT then
 	local CachedTextureID1 = surface.GetTextureID("scope/gdcw_parabolicsight")
 
 	function SWEP:DrawHUD()
+		if self.Owner:GetViewEntity() ~= self.Owner then return end
+
 		if self:GetNWInt("ScopeState") > 0 then
 			if self.DrawCrosshair then -- Only set the vars once (this is faster)
 				self.Owner:DrawViewModel(false)

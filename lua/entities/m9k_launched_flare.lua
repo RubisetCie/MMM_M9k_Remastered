@@ -26,10 +26,25 @@ if SERVER then
 		burnFX:SetPos(self:GetPos())
 		burnFX:SetParent(self)
 		burnFX:SetKeyValue("scale",3)
-		burnFX:SetKeyValue("duration",30)
+		burnFX:SetKeyValue("duration",10)
 		burnFX:Spawn()
 
-		SafeRemoveEntityDelayed(burnFX,30)
+		SafeRemoveEntityDelayed(burnFX,10)
+
+		self.sSound = CreateSound(burnFX,"weapons/flaregun/burn.wav")
+			self.sSound:Play()
+
+		timer.Simple(0,function() -- For some dumb reason this has to happen in the next tick
+			if not IsValid(self) then return end
+
+			ParticleEffectAttach("Rocket_Smoke_Trail",PATTACH_ABSORIGIN_FOLLOW,self,0)
+		end)
+	end
+
+	function ENT:OnRemove()
+		if self.sSound then
+			self.sSound:Stop()
+		end
 	end
 
 	local BurnEntity = function(Ent,Target)
@@ -37,12 +52,21 @@ if SERVER then
 		burnFX:SetPos(Ent:GetPos())
 		burnFX:SetParent(Target)
 		burnFX:SetKeyValue("scale",3)
-		burnFX:SetKeyValue("duration",30)
+		burnFX:SetKeyValue("duration",10)
 		burnFX:Spawn()
 
-		SafeRemoveEntityDelayed(burnFX,30)
+		SafeRemoveEntityDelayed(burnFX,10)
 
-		Target:Ignite(30)
+		Target:Ignite(10)
+
+		local sSound = CreateSound(burnFX,"weapons/flaregun/burn.wav")
+			sSound:Play()
+
+		timer.Simple(10,function()
+			if sSound then
+				sSound:Stop()
+			end
+		end)
 
 		Ent:Remove()
 	end
@@ -59,5 +83,25 @@ end
 if CLIENT then
 	function ENT:Draw()
 		self:DrawModel()
+	end
+
+	function ENT:Think()
+		local iCurTime = CurTime()
+
+		local PhysLight = DynamicLight(self:EntIndex())
+
+		if PhysLight then
+			PhysLight.Pos = self:GetPos()
+			PhysLight.r = 255
+			PhysLight.G = 55
+			PhysLight.B = 55
+			PhysLight.Brightness = 3
+			PhysLight.Size = 20000
+			PhysLight.Decay = 2500
+			PhysLight.DieTime = iCurTime + 0.1
+		end
+
+		self:SetNextClientThink(iCurTime)
+		return true
 	end
 end
