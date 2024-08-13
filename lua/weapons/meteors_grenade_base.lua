@@ -118,6 +118,9 @@ SWEP.bAlwaysTrail = false
 
 SWEP._IsM9kRemasteredBased = true
 
+
+local ConVar_SpawnReserve = CreateConVar("m9k_spawn_with_reserve","1",FCVAR_ARCHIVE,"When set to 1, any weapon acquired will give 3 magazines for that weapon.",0,1)
+
 -- ----- ----- ----- ----- ------- ----- ----- ----- ----- -----
 -- Optimization
 -- ----- ----- ----- ----- ------- ----- ----- ----- ----- -----
@@ -271,6 +274,7 @@ if SERVER then
 		ent_Projectile:SetNWBool("M9kR_Created",true) -- Mark it for Clients.
 
 		ent_Projectile:SetOwner(eOwner) -- Blocks collision with the thrower and IS required to fix a few bugs. (BEFORE SPAWN)
+		ent_Projectile.Owner = eOwner -- Required for self.Owner
 		ent_Projectile:Spawn()
 
 
@@ -324,6 +328,16 @@ if SERVER then
 				if not IsValid(self) or not IsValid(self.Owner) then return end
 
 				self.Owner:SelectWeapon(self:GetClass())
+			end)
+		end
+
+
+		if ConVar_SpawnReserve:GetInt() == 1 then -- Give the Weapon Owner some clips if desired
+
+			timer.Simple(0,function() -- We need to wait one tick so that self.Owner becomes valid
+				if not IsValid(self) or not IsValid(self.Owner) then return end
+
+				self.Owner:GiveAmmo(self.Primary.ClipSize * 3,self.Primary.Ammo,true) -- 3 Clips
 			end)
 		end
 	end

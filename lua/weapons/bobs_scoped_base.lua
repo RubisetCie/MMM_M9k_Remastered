@@ -135,7 +135,7 @@ if SERVER then
 	end
 
 
-	function SWEP:PrimaryAttackHooked()
+	function SWEP:PostPrimaryAttack()
 
 		if self.IsBoltAction and self.tBoltDynamic then -- It's a bolt action, so network a dynamic sound routine!
 
@@ -194,11 +194,6 @@ if SERVER then
 				net.WriteEntity(self)
 			net.Broadcast()
 
-		end
-
-
-		if self.PrimaryAttackHooked2 then
-			self:PrimaryAttackHooked2()
 		end
 
 	end

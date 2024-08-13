@@ -31,7 +31,7 @@ if SERVER then
 
 	function ENT:Initialize()
 
-		if not self.M9kr_CreatedByWeapon then -- Prevents exploiting it
+		if not self.M9kr_CreatedByWeapon or not IsValid(self.Owner) then -- Prevents exploiting it
 			self:Remove()
 
 			return
@@ -46,14 +46,24 @@ if SERVER then
 		self.iLifeTime = CurTime() + 3
 
 
-		SafeRemoveEntityDelayed(self,3.1) -- Just in case
+		SafeRemoveEntityDelayed(self,5) -- Just in case -- Increased to prevent tick-rate shenanigans
 
 	end
 
 
 	function ENT:Think()
 
+		if not IsValid(self.Owner) then
+			self:Remove()
+
+			return
+		end
+
+
 		if self.iLifeTime < CurTime() then
+
+			SafeRemoveEntityDelayed(self,1) -- Prevent error spam
+
 
 			local vPos = self:GetPos()
 
@@ -88,7 +98,7 @@ if SERVER then
 			util.BlastDamage(self,self.Owner,vPos,350,100)
 
 
-			self:EmitSound("ambient/explosions/explode_" .. math.random(4) .. ".wav",100)
+			--self:EmitSound("ambient/explosions/explode_" .. math.random(4) .. ".wav",100)
 
 
 			self:Remove()
@@ -98,7 +108,15 @@ if SERVER then
 
 
 	function ENT:StartTouch(eEnt) -- Stick to object (Better than using PhysicsCollide)
+
+		if not IsValid(self.Owner) then
+			self:Remove()
+
+			return
+		end
+
 		if eEnt == self.Owner then return end
+
 
 		self.StartTouch = nil -- We be sticking.
 
@@ -118,13 +136,23 @@ if SERVER then
 
 	function ENT:PhysicsCollide(obj_Data)
 
-		if self.iNextSound < CurTime() and obj_Data.Speed > 100 and obj_Data.DeltaTime > 0.1 then
+		if not IsValid(self.Owner) then
+			self:Remove()
 
-			self:EmitSound("weapons/hegrenade/he_bounce-1.wav")
-
-			self.iNextSound = CurTime() + 0.1
-
+			return
 		end
+
+
+		local obj_Phys = self:GetPhysicsObject()
+
+		if IsValid(obj_Phys) then
+			obj_Phys:EnableMotion(false)
+		end
+
+		self.StartTouch = nil -- We be sticking.
+
+		self:EmitSound("weapons/hegrenade/he_bounce-1.wav")
+
 	end
 
 

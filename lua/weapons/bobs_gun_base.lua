@@ -73,6 +73,7 @@
 	PrimaryAttack		> PrimaryAttackHooked
 
 
+	SWEP.PostPrimaryAttack -- Can be set to a function that will be called after the PrimaryAttack function finished completely. Client and Server realms.
 	SWEP.PostReloadCall - Can be set to a function that will be called when the reload finished. (Serverside only) - Only works in combination with dynamic reload. - An example can be found in m9k_minigun.lua
 
 
@@ -613,6 +614,11 @@ if SERVER then
 
 		self.Owner:ViewPunch(aRecoil)
 
+
+		if self.PostPrimaryAttack then
+			self:PostPrimaryAttack()
+		end
+
 	end
 
 
@@ -927,6 +933,7 @@ if CLIENT then
 
 				if not eWep.tDrawSoundSequence then
 
+					util.PrecacheSound(eWep.DrawSound) -- Fixes one-time issues
 					eWep.Owner:EmitSound(eWep.DrawSound,65)
 
 				else
@@ -959,6 +966,7 @@ if CLIENT then
 								if iPassed > v.iDelay then
 
 
+									util.PrecacheSound(v.sSound) -- Fixes one-time issues
 									eWep.Owner:EmitSound(v.sSound,v.iVolume or 70,math.random(95,105),1,CHAN_ITEM) -- Random pitch = Better
 
 
@@ -1427,7 +1435,7 @@ if CLIENT then
 
 						if iPassed > v.iDelay then
 
-
+							util.PrecacheSound(v.sSound) -- Fixes one-time issues
 							self.Owner:EmitSound(v.sSound,v.iVolume or 70,math.random(95,105),1,CHAN_ITEM) -- Random pitch = Better
 
 
