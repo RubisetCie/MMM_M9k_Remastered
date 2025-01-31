@@ -1,0 +1,32 @@
+name: Create GMA
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Installing Premake
+        run: sudo apt-get install premake4
+      - name: Building Bootil
+        run: |
+          git clone --depth 1 https://github.com/garrynewman/bootil.git && cd bootil/projects
+          premake4 gmake && cd linux/gmake && make config=release
+        working-directory: ..
+      - name: Building GMAD
+        run: |
+          git clone --depth 1 https://github.com/Facepunch/gmad.git && cd gmad
+          premake4 --outdir=. --bootil_lib=../bootil/lib/linux/gmake --bootil_inc=../bootil/include gmake && make config=release
+        working-directory: ..
+      - name: Creating GMA
+        run: |
+          ../gmad/gmad_linux create -folder . -out mmm-m9k-remastered.gma
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mmm-m9k-remastered
+          path: mmm-m9k-remastered.gma
+          overwrite: true
+          compression-level: 9
+          if-no-files-found: error
